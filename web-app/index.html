@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Examen — Calculadora y Visualizador de Figuras Geométricas</title>
+  <style>
+    :root { --bg:#f4f7fb; --card:#fff; --text:#102033; --muted:#5a6b80; --border:#d7e0ec; --primary:#2563eb; }
+    [data-theme="dark"] { --bg:#0a111f; --card:#131e33; --text:#eef4fb; --muted:#97abc5; --border:#253755; --primary:#60a5fa; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width:960px; margin:0 auto; padding:22px 16px 60px; }
+    .top { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-bottom:16px; }
+    .grid { display:grid; grid-template-columns:1.1fr 1fr; gap:16px; }
+    @media (max-width:780px){ .grid { grid-template-columns:1fr; } }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:16px; }
+    .row { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-bottom:12px; }
+    input, select, button { font:inherit; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); min-width:0; }
+    button { cursor:pointer; font-weight:600; }
+    .btn-primary { background:var(--primary); color:#fff; border-color:transparent; }
+    svg { width:100%; height:220px; background:var(--bg); border-radius:12px; border:1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1 style="margin:0;">📐 Figuras Geométricas — Calculadora y SVG</h1>
+        <div style="color:var(--muted);font-size:14px;">Áreas, perímetros, diagonales, apotema, volumen e historial persistente</div>
+      </div>
+      <button type="button" id="themeBtn">🌙 Oscuro</button>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="row">
+          <select id="shape" aria-label="Figura">
+            <option value="circle">Círculo (r)</option>
+            <option value="rectangle">Cuadrado / Rectángulo (a, b)</option>
+            <option value="triangle">Triángulo Herón (a, b, c)</option>
+            <option value="polygon">Polígono Regular (n, lado)</option>
+            <option value="cylinder">Cilindro (r, h)</option>
+          </select>
+        </div>
+        <div class="row">
+          <input id="v1" type="number" step="any" value="5" placeholder="Parámetro 1" />
+          <input id="v2" type="number" step="any" value="8" placeholder="Parámetro 2" />
+          <input id="v3" type="number" step="any" value="6" placeholder="Parámetro 3" />
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button type="button" id="calcBtn" class="btn-primary">Calcular</button>
+          <button type="button" id="saveBtn">💾 Guardar</button>
+        </div>
+        <div id="out" style="font-size:15px;line-height:1.7;"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0;">Vista previa SVG</h3>
+        <svg id="svg" viewBox="0 0 300 200" role="img" aria-label="Representación de figura geométrica"></svg>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;">Historial guardado</h3>
+      <div id="hist" style="font-size:14px;color:var(--muted);"></div>
+    </div>
+  </div>
+  <script src="./geometry.js"></script>
+  <script>
+    (function () {
+      var G = window.GeometryEngine, KEY = 'geom_hist_v1', TKEY = 'geom_theme';
+      function $(id) { return document.getElementById(id); }
+      var hist = [];
+      try { hist = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) {}
+      function setTheme(t) { document.documentElement.setAttribute('data-theme', t); try { localStorage.setItem(TKEY, t); } catch (e) {} $('themeBtn').textContent = t === 'dark' ? '☀️ Claro' : '🌙 Oscuro'; }
+      setTheme(localStorage.getItem(TKEY) === 'dark' ? 'dark' : 'light');
+      $('themeBtn').addEventListener('click', function () { setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
+
+      var last = null;
+      function draw(mode) {
+        var s = $('svg'), c = 'var(--primary)';
+        if (mode === 'circle') s.innerHTML = '<circle cx="150" cy="100" r="68" fill="rgba(37,99,235,0.18)" stroke="' + c + '" stroke-width="3"/><line x1="150" y1="100" x2="218" y2="100" stroke="' + c + '" stroke-dasharray="4"/>';
+        else if (mode === 'rectangle') s.innerHTML = '<rect x="65" y="45" width="170" height="110" rx="4" fill="rgba(37,99,235,0.18)" stroke="' + c + '" stroke-width="3"/>';
+        else if (mode === 'triangle') s.innerHTML = '<polygon points="150,28 65,168 235,168" fill="rgba(37,99,235,0.18)" stroke="' + c + '" stroke-width="3"/>';
+        else if (mode === 'polygon') s.innerHTML = '<polygon points="150,26 218,64 218,136 150,174 82,136 82,64" fill="rgba(37,99,235,0.18)" stroke="' + c + '" stroke-width="3"/>';
+        else s.innerHTML = '<ellipse cx="150" cy="48" rx="64" ry="20" fill="rgba(37,99,235,0.22)" stroke="' + c + '" stroke-width="3"/><path d="M86 48 V152 A64 20 0 0 0 214 152 V48" fill="rgba(37,99,235,0.14)" stroke="' + c + '" stroke-width="3"/>';
+      }
+
+      function run() {
+        var m = $('shape').value, a = $('v1').value, b = $('v2').value, c = $('v3').value;
+        $('v2').style.display = (m === 'circle') ? 'none' : '';
+        $('v3').style.display = (m === 'triangle') ? '' : 'none';
+        if (m === 'circle') last = G.circle(a);
+        else if (m === 'rectangle') last = G.rectangle(a, b);
+        else if (m === 'triangle') last = G.triangle(a, b, c);
+        else if (m === 'polygon') last = G.regularPolygon(a, b);
+        else last = G.cylinder(a, b);
+        draw(m);
+        if (!last.ok) { $('out').textContent = last.error; return; }
+        var lines = ['<strong>' + last.shape + '</strong>'];
+        if (last.area != null) lines.push('Área: <strong>' + last.area + '</strong>');
+        if (last.perimeter != null) lines.push('Perímetro: <strong>' + last.perimeter + '</strong>');
+        if (last.diagonal != null) lines.push('Diagonal: <strong>' + last.diagonal + '</strong>');
+        if (last.apothem != null) lines.push('Apotema: <strong>' + last.apothem + '</strong>');
+        if (last.volume != null) lines.push('Volumen: <strong>' + last.volume + '</strong>');
+        $('out').innerHTML = lines.join('<br>');
+      }
+      function renderHist() {
+        $('hist').innerHTML = hist.length
+          ? hist.map(function (h) { return '<div style="padding:6px 0;border-bottom:1px solid var(--border);"><strong>' + h.shape + '</strong> · Área ' + h.area + (h.perimeter != null ? ' · Perímetro ' + h.perimeter : '') + (h.volume != null ? ' · Volumen ' + h.volume : '') + '</div>'; }).join('')
+          : 'Sin cálculos guardados todavía.';
+      }
+      ['shape', 'v1', 'v2', 'v3'].forEach(function (id) { $(id).addEventListener('input', run); $(id).addEventListener('change', run); });
+      $('calcBtn').addEventListener('click', run);
+      $('saveBtn').addEventListener('click', function () {
+        if (last && last.ok) { hist.unshift(last); hist = hist.slice(0, 12); try { localStorage.setItem(KEY, JSON.stringify(hist)); } catch (e) {} renderHist(); }
+      });
+      run(); renderHist();
+    })();
+  </script>
+</body>
+</html>
